@@ -1,0 +1,48 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>MySQL Specifics · SQL Analyst Field Guide</title><meta name="description" content="MySQL 8 syntax, data types, dates, null handling, execution plans and interview differences."><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%230a1730'/%3E%3Cpath d='M17 18h30M17 32h19M17 46h30' stroke='%2333d6c7' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='32' r='5' fill='%23c8f760'/%3E%3C/svg%3E"><link rel="stylesheet" href="styles.css"></head><body><a class="skip-link" href="#main">Skip to content</a><div class="mobile-bar"><strong>SQL Field Guide</strong><button class="menu-button" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button></div><button class="backdrop" data-menu-close aria-label="Close navigation"></button><div class="layout">
+<aside class="sidebar" aria-label="Course navigation"><a class="brand" href="index.html"><span class="brand-mark">SQL</span><span><strong>Analyst Field Guide</strong><span>MySQL · DBMS · Interviews</span></span></a><p class="nav-label">Start here</p><ul class="nav-list"><li><a href="index.html">Course map <span class="nav-num">00</span></a></li><li><a href="fundamentals.html">SQL fundamentals <span class="nav-num">01</span></a></li><li><a href="querying.html">Querying data <span class="nav-num">02</span></a></li><li><a href="joins.html">Joins &amp; set logic <span class="nav-num">03</span></a></li><li><a href="aggregation.html">Aggregation <span class="nav-num">04</span></a></li></ul><p class="nav-label">Deep work</p><ul class="nav-list"><li><a href="advanced.html">Advanced SQL <span class="nav-num">05</span></a></li><li><a href="analytics.html">Analytics patterns <span class="nav-num">06</span></a></li><li><a href="dbms.html">DBMS concepts <span class="nav-num">07</span></a></li><li><a aria-current="page" href="mysql.html">MySQL specifics <span class="nav-num">08</span></a></li></ul><p class="nav-label">Interview finish</p><ul class="nav-list"><li><a href="interview.html">Interview bank <span class="nav-num">09</span></a></li><li><a href="sql50.html">SQL 50 tracker <span class="nav-num">10</span></a></li><li><a href="projects.html">Portfolio projects <span class="nav-num">11</span></a></li></ul><div class="progress-card"><div class="progress-row"><span>Core progress</span><strong data-progress-text>0/12</strong></div><div class="progress-track"><div class="progress-bar" data-progress-bar></div></div></div></aside>
+<main class="main" id="main"><div class="content"><header class="page-header"><div class="eyebrow">Module 08 · MySQL 8</div><h1>Know the dialect you will actually write.</h1><p class="lede">Most SQL ideas transfer across databases. This page marks the MySQL syntax and engine details interviewers expect you to recognize.</p><div class="meta-row"><span class="chip chip--accent">MySQL 8+</span><span class="chip">InnoDB</span><span class="chip">EXPLAIN</span><span class="chip">Dialect traps</span></div></header>
+<section class="section"><h2>Types: choose for meaning</h2><div class="table-scroll"><table><thead><tr><th>Need</th><th>Good choice</th><th>Note</th></tr></thead><tbody><tr><td>Identifiers/counts</td><td><code>INT</code>, <code>BIGINT</code></td><td>Use <code>UNSIGNED</code> only when negatives are impossible</td></tr><tr><td>Money</td><td><code>DECIMAL(12,2)</code></td><td>Avoid binary floating-point for exact amounts</td></tr><tr><td>Short text</td><td><code>VARCHAR(n)</code></td><td>Choose character set/collation deliberately</td></tr><tr><td>Calendar date</td><td><code>DATE</code></td><td>No time component</td></tr><tr><td>Event instant</td><td><code>TIMESTAMP</code> or <code>DATETIME</code></td><td>Time-zone and range behavior differ</td></tr><tr><td>Flexible document</td><td><code>JSON</code></td><td>Useful selectively; do not replace sound relational design</td></tr></tbody></table></div><pre><code>CREATE TABLE orders (
+  order_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  customer_id BIGINT UNSIGNED NOT NULL,
+  order_total DECIMAL(12,2) NOT NULL,
+  ordered_at DATETIME NOT NULL,
+  status VARCHAR(30) NOT NULL,
+  INDEX idx_customer_date (customer_id, ordered_at)
+) ENGINE = InnoDB;</code></pre></section>
+<section class="section"><h2>NULL: IFNULL vs COALESCE</h2><pre><code>-- MySQL-specific, exactly two arguments
+IFNULL(referee_id, 0)
+
+-- SQL-standard, first non-NULL from two or more expressions
+COALESCE(referee_id, backup_referee_id, 0)</code></pre><p>For “not referred by customer 2,” the clearest predicate is often:</p><pre><code>WHERE referee_id &lt;&gt; 2 OR referee_id IS NULL;</code></pre><p>Replacing NULL with <code>0</code> is correct only if 0 cannot be a meaningful ID.</p></section>
+<section class="section"><h2>Date and time patterns</h2><pre><code>-- Half-open range is safe for DATETIME values
+WHERE ordered_at &gt;= '2026-01-01'
+  AND ordered_at &lt;  '2026-02-01';
+
+SELECT
+  DATE_FORMAT(ordered_at, '%Y-%m') AS order_month,
+  TIMESTAMPDIFF(DAY, ordered_at, shipped_at) AS ship_days,
+  DATE_ADD(ordered_at, INTERVAL 30 DAY) AS due_at
+FROM orders;</code></pre><div class="callout callout--warn"><strong>Sargability</strong><code>YEAR(ordered_at) = 2026</code> may prevent an index range scan. Prefer explicit lower and upper bounds.</div></section>
+<section class="section"><h2>Dialect differences worth remembering</h2><div class="table-scroll"><table><thead><tr><th>Topic</th><th>MySQL</th></tr></thead><tbody><tr><td>Row limit</td><td><code>LIMIT 10 OFFSET 20</code></td></tr><tr><td>String join</td><td><code>CONCAT(first_name, ' ', last_name)</code></td></tr><tr><td>Null replacement</td><td><code>IFNULL(x, 0)</code> and standard <code>COALESCE</code></td></tr><tr><td>Boolean</td><td><code>BOOLEAN</code> maps to <code>TINYINT(1)</code></td></tr><tr><td>Full outer join</td><td>Not native; emulate with left/right results plus <code>UNION ALL</code> carefully</td></tr><tr><td>Case-insensitive matching</td><td>Usually controlled by collation; <code>LIKE</code> behavior depends on it</td></tr><tr><td>Window functions / CTEs</td><td>Available in MySQL 8.0+</td></tr></tbody></table></div></section>
+<section class="section"><h2>Execution plans with EXPLAIN</h2><pre><code>EXPLAIN ANALYZE
+SELECT customer_id, SUM(order_total) AS revenue
+FROM orders
+WHERE ordered_at &gt;= '2026-01-01'
+  AND ordered_at &lt;  '2027-01-01'
+GROUP BY customer_id;</code></pre><div class="grid grid-2"><article class="card"><h3>Inspect</h3><p>Access type, possible/selected key, estimated vs actual rows, loops, sorting and temporary work.</p></article><article class="card"><h3>Improve</h3><p>Reduce rows early, make predicates indexable, fix join keys, then test an index that matches the workload.</p></article></div><p>A full table scan is not automatically bad: for a small table or a query returning most rows, it may be cheapest.</p></section>
+<section class="section"><h2>InnoDB, transactions and autocommit</h2><p>InnoDB is MySQL’s default transactional engine, supporting ACID transactions, row-level locking, foreign keys and MVCC. MySQL commonly starts with <code>autocommit = 1</code>, so each standalone statement commits unless you begin a transaction.</p><pre><code>START TRANSACTION;
+SELECT quantity FROM inventory WHERE product_id = 42 FOR UPDATE;
+UPDATE inventory SET quantity = quantity - 1 WHERE product_id = 42;
+COMMIT;</code></pre></section>
+<section class="section"><h2>SQL modes and grouping</h2><p>With <code>ONLY_FULL_GROUP_BY</code>, selected non-aggregate expressions must be functionally dependent on the grouped columns. This catches ambiguous queries.</p><pre><code>-- Invalid/ambiguous when a customer has many orders
+SELECT customer_id, order_date, SUM(order_total)
+FROM orders
+GROUP BY customer_id;
+
+-- State the intended grain
+SELECT customer_id, MAX(order_date) AS latest_order,
+       SUM(order_total) AS lifetime_value
+FROM orders
+GROUP BY customer_id;</code></pre></section>
+<section class="section"><h2>MySQL interview checklist</h2><ul class="checklist"><li><label><input type="checkbox" data-key="mysql"><span>I can use MySQL 8 dates, NULL handling, CTEs/windows, indexes, transactions and EXPLAIN without confusing another dialect.</span></label></li></ul></section>
+<nav class="pager"><a href="dbms.html"><small>Previous</small><strong>DBMS concepts</strong></a><a href="interview.html"><small>Next</small><strong>Interview bank</strong></a></nav><footer class="footer">Module 08 · SQL Analyst Field Guide</footer></div></main></div><script src="app.js"></script></body></html>

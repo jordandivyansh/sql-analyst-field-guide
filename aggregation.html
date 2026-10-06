@@ -1,0 +1,36 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Aggregation · SQL Analyst Field Guide</title><meta name="description" content="GROUP BY, HAVING, conditional aggregation and business metrics for analyst interviews."><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%230a1730'/%3E%3Cpath d='M17 18h30M17 32h19M17 46h30' stroke='%2333d6c7' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='32' r='5' fill='%23c8f760'/%3E%3C/svg%3E"><link rel="stylesheet" href="styles.css"></head><body><a class="skip-link" href="#main">Skip to content</a><div class="mobile-bar"><strong>SQL Field Guide</strong><button class="menu-button" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button></div><button class="backdrop" data-menu-close aria-label="Close navigation"></button><div class="layout">
+<aside class="sidebar" aria-label="Course navigation"><a class="brand" href="index.html"><span class="brand-mark">SQL</span><span><strong>Analyst Field Guide</strong><span>MySQL · DBMS · Interviews</span></span></a><p class="nav-label">Start here</p><ul class="nav-list"><li><a href="index.html">Course map <span class="nav-num">00</span></a></li><li><a href="fundamentals.html">SQL fundamentals <span class="nav-num">01</span></a></li><li><a href="querying.html">Querying data <span class="nav-num">02</span></a></li><li><a href="joins.html">Joins &amp; set logic <span class="nav-num">03</span></a></li><li><a aria-current="page" href="aggregation.html">Aggregation <span class="nav-num">04</span></a></li></ul><p class="nav-label">Deep work</p><ul class="nav-list"><li><a href="advanced.html">Advanced SQL <span class="nav-num">05</span></a></li><li><a href="analytics.html">Analytics patterns <span class="nav-num">06</span></a></li><li><a href="dbms.html">DBMS concepts <span class="nav-num">07</span></a></li><li><a href="mysql.html">MySQL specifics <span class="nav-num">08</span></a></li></ul><p class="nav-label">Interview finish</p><ul class="nav-list"><li><a href="interview.html">Interview bank <span class="nav-num">09</span></a></li><li><a href="sql50.html">SQL 50 tracker <span class="nav-num">10</span></a></li><li><a href="projects.html">Portfolio projects <span class="nav-num">11</span></a></li></ul><div class="progress-card"><div class="progress-row"><span>Core progress</span><strong data-progress-text>0/12</strong></div><div class="progress-track"><div class="progress-bar" data-progress-bar></div></div></div></aside>
+<main class="main" id="main"><div class="content"><header class="page-header"><div class="eyebrow">Module 04 · Metrics</div><h1>Control the grain of every metric.</h1><p class="lede">Aggregation is where business definitions become numbers. The SQL is short; the reasoning about denominators and grain is the real interview.</p><div class="meta-row"><span class="chip chip--accent">GROUP BY</span><span class="chip">Conditional metrics</span><span class="chip">Ratios</span></div></header>
+<section class="section"><h2>Aggregate functions</h2><div class="grid grid-3"><article class="card"><h3>COUNT</h3><p>Rows, non-NULL values, or distinct entities.</p></article><article class="card"><h3>SUM / AVG</h3><p>Additive values and averages; both ignore NULL arguments.</p></article><article class="card"><h3>MIN / MAX</h3><p>Extremes for numeric, date, and sortable text values.</p></article></div>
+<pre><code>SELECT
+  region,
+  COUNT(*) AS order_count,
+  COUNT(DISTINCT customer_id) AS customers,
+  SUM(amount) AS revenue,
+  AVG(amount) AS average_order_value
+FROM orders
+GROUP BY region;</code></pre></section>
+<section class="section"><h2>WHERE vs HAVING</h2><div class="grid grid-2"><article class="card"><h3>WHERE</h3><p>Filters rows before groups exist. Usually more efficient when applicable.</p></article><article class="card"><h3>HAVING</h3><p>Filters aggregated groups after GROUP BY.</p></article></div><pre><code>SELECT region, SUM(amount) AS revenue
+FROM orders
+WHERE order_date &gt;= '2026-01-01'
+GROUP BY region
+HAVING SUM(amount) &gt; 100000;</code></pre></section>
+<section class="section"><h2>Conditional aggregation</h2><p>This is one of the highest-value analyst patterns: multiple filtered metrics in a single scan.</p><pre><code>SELECT
+  DATE_FORMAT(order_date, '%Y-%m') AS month,
+  COUNT(*) AS orders,
+  SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) AS paid_orders,
+  SUM(CASE WHEN status = 'refunded' THEN amount ELSE 0 END) AS refund_value,
+  100.0 * SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END)
+        / NULLIF(COUNT(*), 0) AS paid_rate_pct
+FROM orders
+GROUP BY DATE_FORMAT(order_date, '%Y-%m');</code></pre></section>
+<section class="section"><h2>Weighted vs unweighted averages</h2><div class="callout callout--warn"><strong>Average of averages is often wrong</strong>Store-level average order values must be weighted by order counts when calculating the overall average.</div><pre><code>-- Correct weighted average from grouped data
+SELECT
+  SUM(avg_order_value * order_count) / SUM(order_count) AS overall_aov
+FROM store_summary;</code></pre></section>
+<section class="section"><h2>Counting business entities correctly</h2><div class="table-scroll"><table><thead><tr><th>Question</th><th>Expression</th><th>Risk</th></tr></thead><tbody><tr><td>How many rows?</td><td><code>COUNT(*)</code></td><td>May count repeated entities.</td></tr><tr><td>How many customers?</td><td><code>COUNT(DISTINCT customer_id)</code></td><td>Check whether customer ID can be NULL.</td></tr><tr><td>How many paid orders?</td><td><code>SUM(status='paid')</code> in MySQL or CASE</td><td>Use CASE for portability.</td></tr><tr><td>How many active days?</td><td><code>COUNT(DISTINCT activity_date)</code></td><td>Date truncation and timezone matter.</td></tr></tbody></table></div></section>
+<section class="section"><h2>Grouping sets: concept to know</h2><p>Other databases support <code>ROLLUP</code>, <code>CUBE</code>, and <code>GROUPING SETS</code> for multiple aggregation levels. MySQL supports <code>WITH ROLLUP</code>.</p><pre><code>SELECT region, product, SUM(revenue)
+FROM sales
+GROUP BY region, product WITH ROLLUP;</code></pre></section>
+<section class="section"><h2>Metric checkpoint</h2><ul class="checklist"><li><label><input type="checkbox" data-key="aggregation"><span>I can state the output grain, denominator, NULL treatment, and duplicate risk for every aggregate metric.</span></label></li></ul></section>
+<nav class="pager"><a href="joins.html"><small>Previous</small><strong>Joins &amp; set logic</strong></a><a href="advanced.html"><small>Next</small><strong>Advanced SQL</strong></a></nav><footer class="footer">Module 04 · SQL Analyst Field Guide</footer></div></main></div><script src="app.js"></script></body></html>

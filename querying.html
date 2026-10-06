@@ -1,0 +1,45 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Querying Data · SQL Analyst Field Guide</title><meta name="description" content="SELECT, WHERE, CASE, dates, strings, sorting and transformations for analyst interviews."><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%230a1730'/%3E%3Cpath d='M17 18h30M17 32h19M17 46h30' stroke='%2333d6c7' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='32' r='5' fill='%23c8f760'/%3E%3C/svg%3E"><link rel="stylesheet" href="styles.css"></head><body><a class="skip-link" href="#main">Skip to content</a><div class="mobile-bar"><strong>SQL Field Guide</strong><button class="menu-button" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button></div><button class="backdrop" data-menu-close aria-label="Close navigation"></button><div class="layout">
+<aside class="sidebar" aria-label="Course navigation"><a class="brand" href="index.html"><span class="brand-mark">SQL</span><span><strong>Analyst Field Guide</strong><span>MySQL · DBMS · Interviews</span></span></a><p class="nav-label">Start here</p><ul class="nav-list"><li><a href="index.html">Course map <span class="nav-num">00</span></a></li><li><a href="fundamentals.html">SQL fundamentals <span class="nav-num">01</span></a></li><li><a aria-current="page" href="querying.html">Querying data <span class="nav-num">02</span></a></li><li><a href="joins.html">Joins &amp; set logic <span class="nav-num">03</span></a></li><li><a href="aggregation.html">Aggregation <span class="nav-num">04</span></a></li></ul><p class="nav-label">Deep work</p><ul class="nav-list"><li><a href="advanced.html">Advanced SQL <span class="nav-num">05</span></a></li><li><a href="analytics.html">Analytics patterns <span class="nav-num">06</span></a></li><li><a href="dbms.html">DBMS concepts <span class="nav-num">07</span></a></li><li><a href="mysql.html">MySQL specifics <span class="nav-num">08</span></a></li></ul><p class="nav-label">Interview finish</p><ul class="nav-list"><li><a href="interview.html">Interview bank <span class="nav-num">09</span></a></li><li><a href="sql50.html">SQL 50 tracker <span class="nav-num">10</span></a></li><li><a href="projects.html">Portfolio projects <span class="nav-num">11</span></a></li></ul><div class="progress-card"><div class="progress-row"><span>Core progress</span><strong data-progress-text>0/12</strong></div><div class="progress-track"><div class="progress-bar" data-progress-bar></div></div></div></aside>
+<main class="main" id="main"><div class="content"><header class="page-header"><div class="eyebrow">Module 02 · Query craft</div><h1>Shape raw rows into useful answers.</h1><p class="lede">Selection, filtering, transformation, dates and strings are the vocabulary of almost every analyst query.</p><div class="meta-row"><span class="chip chip--accent">Core SQL</span><span class="chip">SQL 50 ready</span><span class="chip">45–60 min</span></div></header>
+<section class="section"><h2>SELECT deliberately</h2><pre><code>SELECT
+  order_id,
+  customer_id,
+  amount,
+  amount * 0.18 AS tax_amount
+FROM orders;</code></pre><div class="callout"><strong>Avoid SELECT * in production analysis</strong>Explicit columns make grain clearer, reduce data transfer, survive schema changes better, and prevent duplicate column-name confusion after joins.</div></section>
+<section class="section"><h2>Filtering operators</h2><div class="grid grid-2"><article class="card"><h3>Comparison</h3><p><code>=</code>, <code>&lt;&gt;</code>, <code>&gt;</code>, <code>&gt;=</code>, <code>BETWEEN</code></p></article><article class="card"><h3>Membership</h3><p><code>IN (...)</code>, <code>NOT IN (...)</code></p></article><article class="card"><h3>Pattern</h3><p><code>LIKE 'A%'</code>, <code>LIKE '_at'</code></p></article><article class="card"><h3>Logical</h3><p><code>NOT</code> → <code>AND</code> → <code>OR</code>; use parentheses.</p></article></div>
+<pre><code>SELECT order_id, amount
+FROM orders
+WHERE order_date &gt;= '2026-01-01'
+  AND status IN ('paid', 'shipped')
+  AND amount BETWEEN 500 AND 5000;</code></pre><div class="callout callout--warn"><strong>NOT IN + NULL trap</strong>If the subquery or list contains NULL, <code>NOT IN</code> can return no rows because comparisons become UNKNOWN. Prefer <code>NOT EXISTS</code> for anti-joins.</div></section>
+<section class="section"><h2>CASE: business rules inside a query</h2><pre><code>SELECT
+  customer_id,
+  lifetime_value,
+  CASE
+    WHEN lifetime_value &gt;= 100000 THEN 'Platinum'
+    WHEN lifetime_value &gt;= 50000  THEN 'Gold'
+    WHEN lifetime_value &gt;= 10000  THEN 'Silver'
+    ELSE 'Standard'
+  END AS customer_tier
+FROM customers;</code></pre><p>CASE stops at the first true condition. Order overlapping conditions from most specific/highest threshold to least specific.</p></section>
+<section class="section"><h2>Strings and cleaning</h2><div class="table-scroll"><table><thead><tr><th>Goal</th><th>MySQL example</th></tr></thead><tbody><tr><td>Normalize case</td><td><code>LOWER(TRIM(email))</code></td></tr><tr><td>Concatenate</td><td><code>CONCAT(first_name, ' ', last_name)</code></td></tr><tr><td>Extract</td><td><code>SUBSTRING(phone, 1, 3)</code></td></tr><tr><td>Replace</td><td><code>REPLACE(code, '-', '')</code></td></tr><tr><td>Length</td><td><code>CHAR_LENGTH(name)</code></td></tr><tr><td>Pattern search</td><td><code>email REGEXP '^[A-Za-z0-9._%+-]+@'</code></td></tr></tbody></table></div></section>
+<section class="section"><h2>Dates and period boundaries</h2><pre><code>SELECT
+  order_id,
+  order_date,
+  YEAR(order_date) AS order_year,
+  DATE_FORMAT(order_date, '%Y-%m') AS order_month,
+  DATEDIFF(CURRENT_DATE, order_date) AS days_since_order
+FROM orders
+WHERE order_date &gt;= '2026-01-01'
+  AND order_date &lt;  '2026-02-01';</code></pre><div class="callout callout--success"><strong>Prefer half-open intervals</strong><code>&gt;= start AND &lt; next_period</code> works cleanly for DATE and timestamp values. <code>BETWEEN</code> is inclusive at both ends and can accidentally exclude late-day timestamps.</div></section>
+<section class="section"><h2>Type conversion and defensive math</h2><pre><code>SELECT
+  CAST(raw_amount AS DECIMAL(12,2)) AS amount,
+  revenue / NULLIF(order_count, 0) AS average_order_value,
+  COALESCE(discount, 0) AS discount
+FROM monthly_metrics;</code></pre><p><code>NULLIF(x, 0)</code> turns a zero denominator into NULL, preventing a divide-by-zero failure while signaling “not computable.”</p></section>
+<section class="section"><h2>Sorting, limiting and deterministic results</h2><pre><code>SELECT customer_id, lifetime_value
+FROM customers
+ORDER BY lifetime_value DESC, customer_id ASC
+LIMIT 10;</code></pre><p>Without <code>ORDER BY</code>, row order is not guaranteed. Add a stable tie-breaker when selecting “top N.”</p><ul class="checklist"><li><label><input type="checkbox" data-key="query-filter"><span>I can combine filters, CASE, dates, strings and defensive calculations without looking up syntax.</span></label></li></ul></section>
+<nav class="pager"><a href="fundamentals.html"><small>Previous</small><strong>SQL fundamentals</strong></a><a href="joins.html"><small>Next</small><strong>Joins &amp; set logic</strong></a></nav><footer class="footer">Module 02 · SQL Analyst Field Guide</footer></div></main></div><script src="app.js"></script></body></html>

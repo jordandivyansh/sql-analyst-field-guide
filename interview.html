@@ -1,0 +1,67 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Interview Bank · SQL Analyst Field Guide</title><meta name="description" content="SQL and DBMS interview questions, live-query patterns, debugging checklist and business case framework."><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%230a1730'/%3E%3Cpath d='M17 18h30M17 32h19M17 46h30' stroke='%2333d6c7' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='32' r='5' fill='%23c8f760'/%3E%3C/svg%3E"><link rel="stylesheet" href="styles.css"></head><body><a class="skip-link" href="#main">Skip to content</a><div class="mobile-bar"><strong>SQL Field Guide</strong><button class="menu-button" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button></div><button class="backdrop" data-menu-close aria-label="Close navigation"></button><div class="layout">
+<aside class="sidebar" aria-label="Course navigation"><a class="brand" href="index.html"><span class="brand-mark">SQL</span><span><strong>Analyst Field Guide</strong><span>MySQL · DBMS · Interviews</span></span></a><p class="nav-label">Start here</p><ul class="nav-list"><li><a href="index.html">Course map <span class="nav-num">00</span></a></li><li><a href="fundamentals.html">SQL fundamentals <span class="nav-num">01</span></a></li><li><a href="querying.html">Querying data <span class="nav-num">02</span></a></li><li><a href="joins.html">Joins &amp; set logic <span class="nav-num">03</span></a></li><li><a href="aggregation.html">Aggregation <span class="nav-num">04</span></a></li></ul><p class="nav-label">Deep work</p><ul class="nav-list"><li><a href="advanced.html">Advanced SQL <span class="nav-num">05</span></a></li><li><a href="analytics.html">Analytics patterns <span class="nav-num">06</span></a></li><li><a href="dbms.html">DBMS concepts <span class="nav-num">07</span></a></li><li><a href="mysql.html">MySQL specifics <span class="nav-num">08</span></a></li></ul><p class="nav-label">Interview finish</p><ul class="nav-list"><li><a aria-current="page" href="interview.html">Interview bank <span class="nav-num">09</span></a></li><li><a href="sql50.html">SQL 50 tracker <span class="nav-num">10</span></a></li><li><a href="projects.html">Portfolio projects <span class="nav-num">11</span></a></li></ul><div class="progress-card"><div class="progress-row"><span>Core progress</span><strong data-progress-text>0/12</strong></div><div class="progress-track"><div class="progress-bar" data-progress-bar></div></div></div></aside>
+<main class="main" id="main"><div class="content"><header class="page-header"><div class="eyebrow">Module 09 · Interview Bank</div><h1>Turn knowledge into a calm, structured answer.</h1><p class="lede">In live SQL, communicate the grain, assumptions and validation before chasing syntax. In business rounds, connect the metric to a decision.</p><div class="meta-row"><span class="chip chip--accent">Rapid-fire theory</span><span class="chip">Live SQL</span><span class="chip">Cases</span><span class="chip">Debugging</span></div></header>
+<section class="section"><h2>Rapid-fire answers</h2><div class="table-scroll"><table><thead><tr><th>Question</th><th>Strong compact answer</th></tr></thead><tbody><tr><td>WHERE vs HAVING?</td><td><code>WHERE</code> filters rows before grouping; <code>HAVING</code> filters groups after aggregation.</td></tr><tr><td>DELETE vs TRUNCATE vs DROP?</td><td>DELETE removes chosen rows; TRUNCATE removes all rows efficiently; DROP removes the object definition.</td></tr><tr><td>PRIMARY KEY vs UNIQUE?</td><td>Both enforce uniqueness; the primary key is the row’s main identity and cannot be NULL. MySQL permits multiple UNIQUE constraints.</td></tr><tr><td>UNION vs UNION ALL?</td><td>UNION removes duplicates; UNION ALL preserves them and avoids deduplication work.</td></tr><tr><td>CTE vs subquery?</td><td>Both express intermediate logic. A CTE often makes multi-step queries clearer; neither is inherently faster.</td></tr><tr><td>RANK vs DENSE_RANK?</td><td>Both preserve ties; RANK leaves gaps after ties, DENSE_RANK does not.</td></tr><tr><td>Why an index?</td><td>It offers a cheaper access path for suitable reads, with storage and write-maintenance cost.</td></tr><tr><td>Why normalize?</td><td>Reduce redundancy and insertion/update/deletion anomalies while protecting integrity.</td></tr><tr><td>What is ACID?</td><td>Atomicity, consistency, isolation and durability—the core transaction guarantees.</td></tr></tbody></table></div></section>
+<section class="section"><h2>Before writing: say this out loud</h2><ol><li>“One output row should represent …”</li><li>“I’ll assume ties should … and NULL means …”</li><li>“I’ll filter to the relevant population, aggregate at …, then rank/join.”</li><li>“I’ll validate row counts, duplicates and a small hand-calculated sample.”</li></ol><div class="callout callout--success"><strong>This is senior analyst behavior</strong>Clarifying ambiguous requirements is part of the solution, not a delay before it.</div></section>
+<section class="section"><h2>Pattern 1: second-highest distinct salary</h2><pre><code>WITH ranked AS (
+  SELECT employee_id, salary,
+         DENSE_RANK() OVER (ORDER BY salary DESC) AS salary_rank
+  FROM employees
+  WHERE salary IS NOT NULL
+)
+SELECT employee_id, salary
+FROM ranked
+WHERE salary_rank = 2;</code></pre><p>Ask whether the result should return every tied employee or one salary value.</p></section>
+<section class="section"><h2>Pattern 2: managers with at least five reports</h2><pre><code>SELECT m.employee_id, m.employee_name,
+       COUNT(*) AS direct_reports
+FROM employees e
+JOIN employees m ON e.manager_id = m.employee_id
+GROUP BY m.employee_id, m.employee_name
+HAVING COUNT(*) &gt;= 5;</code></pre></section>
+<section class="section"><h2>Pattern 3: top three products in each category</h2><pre><code>WITH product_sales AS (
+  SELECT p.category_id, oi.product_id,
+         SUM(oi.quantity * oi.unit_price) AS revenue
+  FROM order_items oi
+  JOIN products p ON p.product_id = oi.product_id
+  GROUP BY p.category_id, oi.product_id
+), ranked AS (
+  SELECT *, DENSE_RANK() OVER (
+    PARTITION BY category_id ORDER BY revenue DESC
+  ) AS rnk
+  FROM product_sales
+)
+SELECT * FROM ranked WHERE rnk &lt;= 3;</code></pre><p>Confirm whether ties may return more than three rows; otherwise use <code>ROW_NUMBER</code> and a deterministic tie-breaker.</p></section>
+<section class="section"><h2>Pattern 4: find and inspect duplicates</h2><pre><code>SELECT email, COUNT(*) AS records
+FROM customers
+WHERE email IS NOT NULL
+GROUP BY email
+HAVING COUNT(*) &gt; 1;
+
+-- Keep the newest record in a review output
+WITH tagged AS (
+  SELECT *, ROW_NUMBER() OVER (
+    PARTITION BY email ORDER BY updated_at DESC, customer_id DESC
+  ) AS rn
+  FROM customers
+)
+SELECT * FROM tagged WHERE rn &gt; 1;</code></pre></section>
+<section class="section"><h2>Pattern 5: consecutive-day activity</h2><pre><code>WITH distinct_days AS (
+  SELECT DISTINCT user_id, DATE(activity_at) AS activity_date
+  FROM activity
+), grouped AS (
+  SELECT *, DATE_SUB(
+    activity_date,
+    INTERVAL ROW_NUMBER() OVER (
+      PARTITION BY user_id ORDER BY activity_date
+    ) DAY
+  ) AS island_key
+  FROM distinct_days
+)
+SELECT user_id, MIN(activity_date) AS streak_start,
+       MAX(activity_date) AS streak_end, COUNT(*) AS streak_days
+FROM grouped
+GROUP BY user_id, island_key;</code></pre></section>
+<section class="section"><h2>Debugging checklist</h2><div class="grid grid-2"><article class="card"><h3>Correctness</h3><ul><li>Is the source grain what I think?</li><li>Did a one-to-many join multiply rows?</li><li>Can NULL remove or alter a row?</li><li>Is the denominator the correct population?</li></ul></article><article class="card"><h3>Boundaries</h3><ul><li>Are time zones and partial periods defined?</li><li>Are date ranges half-open?</li><li>Are ties deterministic?</li><li>Do zero-activity entities need to appear?</li></ul></article></div><p>Validate with row counts before/after joins, uniqueness checks, min/max dates, null counts, totals against a trusted source, and 3–5 manually traced entities.</p></section>
+<section class="section"><h2>Business case answer: D-R-I-V-E</h2><div class="grid grid-3"><article class="card"><h3>Define</h3><p>Decision, stakeholder, scope and success metric.</p></article><article class="card"><h3>Review</h3><p>Data availability, grain, quality and assumptions.</p></article><article class="card"><h3>Investigate</h3><p>Segment, compare, form hypotheses and test drivers.</p></article><article class="card"><h3>Validate</h3><p>Reconcile, sensitivity-test and identify limitations.</p></article><article class="card"><h3>Execute</h3><p>Recommend owner, action, expected impact and monitoring.</p></article></div><div class="callout"><strong>Example</strong>If conversion falls, segment by funnel step, channel, device, cohort and time; distinguish traffic-mix change from a product defect before recommending action.</div></section>
+<section class="section"><h2>Mock interview loop</h2><ol><li>Pick one unseen SQL problem and set a 30-minute timer.</li><li>Spend the first 3 minutes defining grain and edge cases.</li><li>Write the solution while narrating, then test adversarial rows.</li><li>Explain complexity/index opportunities in 60 seconds.</li><li>Log the error pattern, not just the problem title.</li></ol></section>
+<nav class="pager"><a href="mysql.html"><small>Previous</small><strong>MySQL specifics</strong></a><a href="sql50.html"><small>Next</small><strong>SQL 50 tracker</strong></a></nav><footer class="footer">Module 09 · SQL Analyst Field Guide</footer></div></main></div><script src="app.js"></script></body></html>

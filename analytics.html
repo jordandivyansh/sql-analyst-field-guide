@@ -1,0 +1,74 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Analytics Patterns · SQL Analyst Field Guide</title><meta name="description" content="Funnels, cohorts, retention, growth, customer value and business metrics in SQL."><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%230a1730'/%3E%3Cpath d='M17 18h30M17 32h19M17 46h30' stroke='%2333d6c7' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='32' r='5' fill='%23c8f760'/%3E%3C/svg%3E"><link rel="stylesheet" href="styles.css"></head><body><a class="skip-link" href="#main">Skip to content</a><div class="mobile-bar"><strong>SQL Field Guide</strong><button class="menu-button" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button></div><button class="backdrop" data-menu-close aria-label="Close navigation"></button><div class="layout">
+<aside class="sidebar" aria-label="Course navigation"><a class="brand" href="index.html"><span class="brand-mark">SQL</span><span><strong>Analyst Field Guide</strong><span>MySQL · DBMS · Interviews</span></span></a><p class="nav-label">Start here</p><ul class="nav-list"><li><a href="index.html">Course map <span class="nav-num">00</span></a></li><li><a href="fundamentals.html">SQL fundamentals <span class="nav-num">01</span></a></li><li><a href="querying.html">Querying data <span class="nav-num">02</span></a></li><li><a href="joins.html">Joins &amp; set logic <span class="nav-num">03</span></a></li><li><a href="aggregation.html">Aggregation <span class="nav-num">04</span></a></li></ul><p class="nav-label">Deep work</p><ul class="nav-list"><li><a href="advanced.html">Advanced SQL <span class="nav-num">05</span></a></li><li><a aria-current="page" href="analytics.html">Analytics patterns <span class="nav-num">06</span></a></li><li><a href="dbms.html">DBMS concepts <span class="nav-num">07</span></a></li><li><a href="mysql.html">MySQL specifics <span class="nav-num">08</span></a></li></ul><p class="nav-label">Interview finish</p><ul class="nav-list"><li><a href="interview.html">Interview bank <span class="nav-num">09</span></a></li><li><a href="sql50.html">SQL 50 tracker <span class="nav-num">10</span></a></li><li><a href="projects.html">Portfolio projects <span class="nav-num">11</span></a></li></ul><div class="progress-card"><div class="progress-row"><span>Core progress</span><strong data-progress-text>0/12</strong></div><div class="progress-track"><div class="progress-bar" data-progress-bar></div></div></div></aside>
+<main class="main" id="main"><div class="content"><header class="page-header"><div class="eyebrow">Module 06 · Business analysis</div><h1>Move from query output to business insight.</h1><p class="lede">These reusable patterns translate product, sales, operations, and customer questions into defensible metrics.</p><div class="meta-row"><span class="chip chip--accent">Funnels</span><span class="chip">Cohorts</span><span class="chip">Growth</span><span class="chip">Customer value</span></div></header>
+<section class="section"><h2>Metric definition template</h2><div class="grid grid-3"><article class="card"><span class="card-number">01</span><h3>Entity and grain</h3><p>One row per user, order, day, territory, or event?</p></article><article class="card"><span class="card-number">02</span><h3>Population and window</h3><p>Which users qualify, over what date range, in which timezone?</p></article><article class="card"><span class="card-number">03</span><h3>Formula and exclusions</h3><p>Numerator, denominator, cancellations, test users, late records.</p></article></div></section>
+<section class="section"><h2>Funnel conversion</h2><pre><code>WITH user_steps AS (
+  SELECT
+    user_id,
+    MIN(CASE WHEN event_name = 'visit' THEN event_time END) AS visited_at,
+    MIN(CASE WHEN event_name = 'signup' THEN event_time END) AS signed_up_at,
+    MIN(CASE WHEN event_name = 'purchase' THEN event_time END) AS purchased_at
+  FROM events
+  GROUP BY user_id
+)
+SELECT
+  COUNT(*) AS visitors,
+  SUM(signed_up_at IS NOT NULL) AS signups,
+  SUM(purchased_at IS NOT NULL) AS purchasers,
+  100.0 * SUM(purchased_at IS NOT NULL) / NULLIF(COUNT(*), 0) AS visit_to_purchase_pct
+FROM user_steps;</code></pre><p>Define whether steps must occur in order and within a conversion window. The query above captures first occurrence but does not yet enforce sequence.</p></section>
+<section class="section"><h2>Cohort retention</h2><pre><code>WITH first_month AS (
+  SELECT user_id, DATE_FORMAT(MIN(activity_date), '%Y-%m-01') AS cohort_month
+  FROM activity
+  GROUP BY user_id
+),
+monthly_activity AS (
+  SELECT DISTINCT user_id, DATE_FORMAT(activity_date, '%Y-%m-01') AS active_month
+  FROM activity
+)
+SELECT
+  f.cohort_month,
+  TIMESTAMPDIFF(MONTH, f.cohort_month, a.active_month) AS month_number,
+  COUNT(DISTINCT a.user_id) AS retained_users
+FROM first_month f
+JOIN monthly_activity a ON a.user_id = f.user_id
+GROUP BY f.cohort_month, month_number;</code></pre><p>Divide each retained count by month-0 cohort size to calculate retention rate.</p></section>
+<section class="section"><h2>Period-over-period growth</h2><pre><code>WITH monthly AS (
+  SELECT DATE_FORMAT(order_date, '%Y-%m-01') AS month,
+         SUM(amount) AS revenue
+  FROM orders
+  GROUP BY month
+),
+compared AS (
+  SELECT *,
+         LAG(revenue) OVER (ORDER BY month) AS previous_revenue
+  FROM monthly
+)
+SELECT *,
+       100.0 * (revenue - previous_revenue)
+       / NULLIF(previous_revenue, 0) AS mom_growth_pct
+FROM compared;</code></pre></section>
+<section class="section"><h2>Contribution and Pareto analysis</h2><pre><code>WITH product_revenue AS (
+  SELECT product_id, SUM(amount) AS revenue
+  FROM order_items
+  GROUP BY product_id
+)
+SELECT
+  product_id,
+  revenue,
+  100.0 * revenue / SUM(revenue) OVER () AS share_pct,
+  100.0 * SUM(revenue) OVER (
+    ORDER BY revenue DESC
+    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+  ) / SUM(revenue) OVER () AS cumulative_share_pct
+FROM product_revenue;</code></pre></section>
+<section class="section"><h2>RFM customer segmentation</h2><div class="table-scroll"><table><thead><tr><th>Dimension</th><th>Meaning</th><th>Typical measure</th></tr></thead><tbody><tr><td>Recency</td><td>How recently the customer purchased</td><td>Days since last order</td></tr><tr><td>Frequency</td><td>How often they purchase</td><td>Distinct order count</td></tr><tr><td>Monetary</td><td>How much value they generated</td><td>Paid revenue</td></tr></tbody></table></div><pre><code>SELECT
+  customer_id,
+  DATEDIFF(CURRENT_DATE, MAX(order_date)) AS recency_days,
+  COUNT(DISTINCT order_id) AS frequency,
+  SUM(amount) AS monetary_value
+FROM orders
+WHERE status = 'paid'
+GROUP BY customer_id;</code></pre></section>
+<section class="section"><h2>Data-quality checks before insight</h2><div class="grid grid-2"><article class="card"><h3>Completeness</h3><p>NULL rate by critical column and period.</p></article><article class="card"><h3>Uniqueness</h3><p>Duplicate primary or business keys.</p></article><article class="card"><h3>Validity</h3><p>Unexpected status, negative amount, future date.</p></article><article class="card"><h3>Reconciliation</h3><p>Row counts and totals before/after every transformation.</p></article></div><ul class="checklist"><li><label><input type="checkbox" data-key="analytics"><span>I can define and query a funnel, cohort, growth metric, contribution analysis and customer segment.</span></label></li></ul></section>
+<nav class="pager"><a href="advanced.html"><small>Previous</small><strong>Advanced SQL</strong></a><a href="dbms.html"><small>Next</small><strong>DBMS concepts</strong></a></nav><footer class="footer">Module 06 · SQL Analyst Field Guide</footer></div></main></div><script src="app.js"></script></body></html>

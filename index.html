@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SQL Analyst Field Guide</title>
+  <meta name="description" content="A complete SQL, MySQL, and DBMS interview handbook for data analysts and business analysts.">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%230a1730'/%3E%3Cpath d='M17 18h30M17 32h19M17 46h30' stroke='%2333d6c7' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='32' r='5' fill='%23c8f760'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="mobile-bar"><strong>SQL Field Guide</strong><button class="menu-button" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button></div>
+<button class="backdrop" data-menu-close aria-label="Close navigation"></button>
+<div class="layout">
+  <aside class="sidebar" aria-label="Course navigation">
+    <a class="brand" href="index.html"><span class="brand-mark">SQL</span><span><strong>Analyst Field Guide</strong><span>MySQL · DBMS · Interviews</span></span></a>
+    <p class="nav-label">Start here</p>
+    <ul class="nav-list"><li><a aria-current="page" href="index.html">Course map <span class="nav-num">00</span></a></li><li><a href="fundamentals.html">SQL fundamentals <span class="nav-num">01</span></a></li><li><a href="querying.html">Querying data <span class="nav-num">02</span></a></li><li><a href="joins.html">Joins &amp; set logic <span class="nav-num">03</span></a></li><li><a href="aggregation.html">Aggregation <span class="nav-num">04</span></a></li></ul>
+    <p class="nav-label">Deep work</p>
+    <ul class="nav-list"><li><a href="advanced.html">Advanced SQL <span class="nav-num">05</span></a></li><li><a href="analytics.html">Analytics patterns <span class="nav-num">06</span></a></li><li><a href="dbms.html">DBMS concepts <span class="nav-num">07</span></a></li><li><a href="mysql.html">MySQL specifics <span class="nav-num">08</span></a></li></ul>
+    <p class="nav-label">Interview finish</p>
+    <ul class="nav-list"><li><a href="interview.html">Interview bank <span class="nav-num">09</span></a></li><li><a href="sql50.html">SQL 50 tracker <span class="nav-num">10</span></a></li><li><a href="projects.html">Portfolio projects <span class="nav-num">11</span></a></li></ul>
+    <div class="progress-card"><div class="progress-row"><span>Core progress</span><strong data-progress-text>0/12</strong></div><div class="progress-track"><div class="progress-bar" data-progress-bar></div></div></div>
+  </aside>
+  <main class="main" id="main">
+    <div class="content">
+      <header class="page-header">
+        <div class="eyebrow">Interview operating system</div>
+        <h1>Learn SQL like an analyst, not a syntax collector.</h1>
+        <p class="lede">Master the database concepts, query patterns, MySQL behaviour, business reasoning, and interview explanations needed for Data Analyst and Business Analyst roles—then pressure-test them with SQL 50.</p>
+        <div class="meta-row"><span class="chip chip--accent">12 modules</span><span class="chip">100+ examples</span><span class="chip">2 portfolio projects</span><span class="chip">MySQL 8+</span></div>
+        <div class="search-box"><input data-topic-search type="search" placeholder="Search topics: NULL, window functions, normalization…" aria-label="Search course topics"><span class="result-count" data-result-count>12 topics</span></div>
+      </header>
+      <section class="section">
+        <div class="section-head"><div><h2>Your learning loop</h2><p>Each pass turns knowledge into interview performance.</p></div></div>
+        <div class="grid grid-3">
+          <article class="card"><span class="card-number">01 · UNDERSTAND</span><h3>Read the concept</h3><p>Build the mental model: what SQL does, why the construct exists, and what can go wrong.</p></article>
+          <article class="card"><span class="card-number">02 · EXECUTE</span><h3>Write from scratch</h3><p>Recreate each example without copying. Predict the result before running the query.</p></article>
+          <article class="card"><span class="card-number">03 · EXPLAIN</span><h3>Defend the choice</h3><p>Explain correctness, NULL behaviour, grain, performance, and business meaning aloud.</p></article>
+        </div>
+      </section>
+      <section class="section">
+        <div class="section-head"><div><h2>Complete course map</h2><p>Use search to find a concept. Every card links to the lesson where it is taught and interviewed.</p></div></div>
+        <div class="grid grid-2">
+          <article class="card topic-card" data-topic-card data-keywords="database table row column schema null keys types ddl dml"><span class="card-number">01</span><h3><a href="fundamentals.html">SQL fundamentals</a></h3><p>Relational model, data types, keys, constraints, NULL, DDL/DML/DCL/TCL, execution order.</p></article>
+          <article class="card topic-card" data-topic-card data-keywords="select where order by limit case string date functions"><span class="card-number">02</span><h3><a href="querying.html">Querying and transformation</a></h3><p>SELECT, filtering, sorting, CASE, dates, strings, numeric functions, type conversion.</p></article>
+          <article class="card topic-card" data-topic-card data-keywords="inner left right full cross self union intersect except anti semi"><span class="card-number">03</span><h3><a href="joins.html">Joins and set logic</a></h3><p>Join cardinality, duplicate multiplication, anti-joins, self-joins, UNION and set operations.</p></article>
+          <article class="card topic-card" data-topic-card data-keywords="group by having count sum avg distinct conditional aggregation"><span class="card-number">04</span><h3><a href="aggregation.html">Aggregation</a></h3><p>Grain, GROUP BY, HAVING, distinct counts, conditional metrics, ratios and safe denominators.</p></article>
+          <article class="card topic-card" data-topic-card data-keywords="subquery cte recursive window rank row_number lead lag frame pivot"><span class="card-number">05</span><h3><a href="advanced.html">Advanced SQL</a></h3><p>Subqueries, CTEs, window functions, recursive logic, pivots, deduplication, query plans.</p></article>
+          <article class="card topic-card" data-topic-card data-keywords="funnel cohort retention churn ltv rolling average pareto segmentation"><span class="card-number">06</span><h3><a href="analytics.html">Analytics patterns</a></h3><p>Funnels, cohorts, retention, growth, contribution, customer value, period comparisons.</p></article>
+          <article class="card topic-card" data-topic-card data-keywords="acid transaction normalization index lock isolation er diagram warehouse star schema"><span class="card-number">07</span><h3><a href="dbms.html">DBMS concepts</a></h3><p>Normalization, transactions, ACID, indexes, isolation, locks, OLTP/OLAP, warehouses.</p></article>
+          <article class="card topic-card" data-topic-card data-keywords="mysql explain engine innodb auto_increment ifnull date_format sql mode"><span class="card-number">08</span><h3><a href="mysql.html">MySQL specifics</a></h3><p>MySQL syntax, InnoDB, EXPLAIN, indexes, functions, date behaviour, modes and pitfalls.</p></article>
+          <article class="card topic-card" data-topic-card data-keywords="interview questions cases debugging performance business analyst"><span class="card-number">09</span><h3><a href="interview.html">Interview question bank</a></h3><p>Rapid-fire theory, live SQL prompts, business cases, debugging and answer frameworks.</p></article>
+          <article class="card topic-card" data-topic-card data-keywords="leetcode sql 50 practice easy medium hard roadmap"><span class="card-number">10</span><h3><a href="sql50.html">SQL 50 practice map</a></h3><p>Topic sequence, attempt rules, error log, revision system, and readiness milestones.</p></article>
+          <article class="card topic-card" data-topic-card data-keywords="project portfolio healthcare sales dashboard business requirements brd uat"><span class="card-number">11</span><h3><a href="projects.html">Two portfolio projects</a></h3><p>A Data Analyst commercial-performance project and a Business Analyst process-improvement case.</p></article>
+          <article class="card card--dark topic-card" data-topic-card data-keywords="pandas numpy later python"><span class="card-number">NEXT</span><h3>Pandas and NumPy edition</h3><p>This same architecture is ready for a later Python analytics guide: arrays → DataFrames → cleaning → EDA → interview drills.</p></article>
+        </div>
+      </section>
+      <section class="section">
+        <div class="section-head"><div><h2>Recommended sequence</h2><p>Do not wait until the end to practise. Pair each lesson with SQL 50 questions.</p></div></div>
+        <div class="table-scroll"><table><thead><tr><th>Phase</th><th>Guide</th><th>SQL 50</th><th>Exit test</th></tr></thead><tbody><tr><td>Foundation</td><td>Modules 01–04</td><td>Easy SELECT, joins, aggregates</td><td>Write 10 queries without syntax help</td></tr><tr><td>Interview core</td><td>Modules 05–06</td><td>Medium grouping, subqueries, windows</td><td>Explain grain and NULL handling aloud</td></tr><tr><td>Systems</td><td>Modules 07–08</td><td>Revisit slow or incorrect solutions</td><td>Explain indexes, ACID and EXPLAIN</td></tr><tr><td>Proof</td><td>Modules 09–11</td><td>Timed mixed set</td><td>Complete case + project walkthrough</td></tr></tbody></table></div>
+        <ul class="checklist"><li><label><input type="checkbox" data-key="sql50"><span>I have started an SQL 50 error log.</span></label></li></ul>
+      </section>
+      <nav class="pager" aria-label="Lesson navigation"><a href="projects.html"><small>Jump to portfolio</small><strong>Two analyst projects</strong></a><a href="fundamentals.html"><small>Begin module 01</small><strong>SQL fundamentals</strong></a></nav>
+      <footer class="footer">SQL Analyst Field Guide · Designed for Data Analyst and Business Analyst interview preparation.</footer>
+    </div>
+  </main>
+</div>
+<script src="app.js"></script>
+</body>
+</html>

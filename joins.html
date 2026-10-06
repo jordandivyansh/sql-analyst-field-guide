@@ -1,0 +1,47 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Joins &amp; Set Logic · SQL Analyst Field Guide</title><meta name="description" content="SQL joins, cardinality, anti-joins and set operations explained for analyst interviews."><link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%230a1730'/%3E%3Cpath d='M17 18h30M17 32h19M17 46h30' stroke='%2333d6c7' stroke-width='7' stroke-linecap='round'/%3E%3Ccircle cx='44' cy='32' r='5' fill='%23c8f760'/%3E%3C/svg%3E"><link rel="stylesheet" href="styles.css"></head><body><a class="skip-link" href="#main">Skip to content</a><div class="mobile-bar"><strong>SQL Field Guide</strong><button class="menu-button" data-menu-toggle aria-expanded="false" aria-label="Open navigation">☰</button></div><button class="backdrop" data-menu-close aria-label="Close navigation"></button><div class="layout">
+<aside class="sidebar" aria-label="Course navigation"><a class="brand" href="index.html"><span class="brand-mark">SQL</span><span><strong>Analyst Field Guide</strong><span>MySQL · DBMS · Interviews</span></span></a><p class="nav-label">Start here</p><ul class="nav-list"><li><a href="index.html">Course map <span class="nav-num">00</span></a></li><li><a href="fundamentals.html">SQL fundamentals <span class="nav-num">01</span></a></li><li><a href="querying.html">Querying data <span class="nav-num">02</span></a></li><li><a aria-current="page" href="joins.html">Joins &amp; set logic <span class="nav-num">03</span></a></li><li><a href="aggregation.html">Aggregation <span class="nav-num">04</span></a></li></ul><p class="nav-label">Deep work</p><ul class="nav-list"><li><a href="advanced.html">Advanced SQL <span class="nav-num">05</span></a></li><li><a href="analytics.html">Analytics patterns <span class="nav-num">06</span></a></li><li><a href="dbms.html">DBMS concepts <span class="nav-num">07</span></a></li><li><a href="mysql.html">MySQL specifics <span class="nav-num">08</span></a></li></ul><p class="nav-label">Interview finish</p><ul class="nav-list"><li><a href="interview.html">Interview bank <span class="nav-num">09</span></a></li><li><a href="sql50.html">SQL 50 tracker <span class="nav-num">10</span></a></li><li><a href="projects.html">Portfolio projects <span class="nav-num">11</span></a></li></ul><div class="progress-card"><div class="progress-row"><span>Core progress</span><strong data-progress-text>0/12</strong></div><div class="progress-track"><div class="progress-bar" data-progress-bar></div></div></div></aside>
+<main class="main" id="main"><div class="content"><header class="page-header"><div class="eyebrow">Module 03 · Relationships</div><h1>Join at the right grain.</h1><p class="lede">Most serious SQL mistakes are not syntax errors. They are silent row multiplication, missing matches, or the wrong relationship.</p><div class="meta-row"><span class="chip chip--accent">High-frequency interview topic</span><span class="chip">Cardinality first</span></div></header>
+<section class="section"><h2>Join types</h2><div class="table-scroll"><table><thead><tr><th>Join</th><th>Rows retained</th><th>Typical use</th></tr></thead><tbody><tr><td>INNER</td><td>Matching rows from both sides</td><td>Orders with valid customers</td></tr><tr><td>LEFT</td><td>Every left row, matching right rows</td><td>All customers, including those with no orders</td></tr><tr><td>RIGHT</td><td>Every right row</td><td>Usually rewritten as LEFT for readability</td></tr><tr><td>FULL OUTER</td><td>All rows from both sides</td><td>Reconciliation; not directly supported by MySQL</td></tr><tr><td>CROSS</td><td>Every possible combination</td><td>Date spine × product matrix</td></tr><tr><td>SELF</td><td>A table joined to itself</td><td>Employee-manager hierarchy</td></tr></tbody></table></div></section>
+<section class="section"><h2>Core pattern</h2><pre><code>SELECT
+  c.customer_id,
+  c.customer_name,
+  o.order_id,
+  o.amount
+FROM customers AS c
+LEFT JOIN orders AS o
+  ON o.customer_id = c.customer_id;</code></pre><div class="callout"><strong>ON vs WHERE with a LEFT JOIN</strong>A right-table filter in <code>WHERE</code> removes unmatched NULL rows and can effectively turn the result into an INNER JOIN. Put match-specific conditions in <code>ON</code> when unmatched left rows must survive.</div>
+<pre><code>-- Keep every customer; attach only paid orders
+FROM customers c
+LEFT JOIN orders o
+  ON o.customer_id = c.customer_id
+ AND o.status = 'paid'</code></pre></section>
+<section class="section"><h2>Cardinality and duplicate multiplication</h2><p>Before joining, ask whether each key is unique on each side.</p><div class="grid grid-2"><article class="card"><h3>One-to-one</h3><p>One customer → one profile. Row count usually stays stable.</p></article><article class="card"><h3>One-to-many</h3><p>One customer → many orders. Customer data repeats by design.</p></article><article class="card"><h3>Many-to-many</h3><p>Many students ↔ many courses via a bridge table.</p></article><article class="card card--accent"><h3>Danger: many-to-many by accident</h3><p>Joining orders and payments only by customer can multiply both event sets.</p></article></div>
+<pre><code>-- Diagnose uniqueness before joining
+SELECT customer_id, COUNT(*) AS rows_per_key
+FROM customer_profiles
+GROUP BY customer_id
+HAVING COUNT(*) &gt; 1;</code></pre></section>
+<section class="section"><h2>Semi-join and anti-join</h2><div class="grid grid-2"><article class="card"><h3>EXISTS: has a match</h3><pre><code>SELECT c.*
+FROM customers c
+WHERE EXISTS (
+  SELECT 1
+  FROM orders o
+  WHERE o.customer_id = c.customer_id
+);</code></pre></article><article class="card"><h3>NOT EXISTS: has no match</h3><pre><code>SELECT c.*
+FROM customers c
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM orders o
+  WHERE o.customer_id = c.customer_id
+);</code></pre></article></div><p><code>EXISTS</code> tests presence without multiplying the outer row. It is usually clearer than joining and adding <code>DISTINCT</code>.</p></section>
+<section class="section"><h2>Self-join example</h2><pre><code>SELECT
+  e.employee_name,
+  m.employee_name AS manager_name
+FROM employees e
+LEFT JOIN employees m
+  ON m.employee_id = e.manager_id;</code></pre></section>
+<section class="section"><h2>Set operations</h2><div class="table-scroll"><table><thead><tr><th>Operation</th><th>Duplicate behaviour</th><th>MySQL</th></tr></thead><tbody><tr><td>UNION</td><td>Removes duplicates</td><td>Supported</td></tr><tr><td>UNION ALL</td><td>Keeps duplicates; usually faster</td><td>Supported</td></tr><tr><td>INTERSECT</td><td>Rows in both queries</td><td>Use INNER JOIN / EXISTS in MySQL</td></tr><tr><td>EXCEPT</td><td>Rows in first, not second</td><td>Use NOT EXISTS in MySQL</td></tr></tbody></table></div><pre><code>SELECT email FROM web_leads
+UNION ALL
+SELECT email FROM event_leads;</code></pre><p>Set-operation branches must return the same number of columns in compatible types. The final column names come from the first query.</p></section>
+<section class="section"><h2>Join debugging checkpoint</h2><ul class="checklist"><li><label><input type="checkbox" data-key="joins"><span>I state the grain of both tables, test key uniqueness, predict row count, and reconcile totals before trusting a join.</span></label></li></ul></section>
+<nav class="pager"><a href="querying.html"><small>Previous</small><strong>Querying data</strong></a><a href="aggregation.html"><small>Next</small><strong>Aggregation</strong></a></nav><footer class="footer">Module 03 · SQL Analyst Field Guide</footer></div></main></div><script src="app.js"></script></body></html>

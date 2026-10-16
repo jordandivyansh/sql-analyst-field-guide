@@ -12,6 +12,7 @@ An interlinked SQL, MySQL, and DBMS interview handbook for Data Analyst and Busi
 - MySQL 8 syntax, execution plans, transactions, and dialect-specific behavior
 - Interview question bank and structured SQL 50 practice plan
 - Data Analyst and Business Analyst portfolio project specifications
+- Persistent light/dark reading mode for desktop, tablet, and mobile
 
 ## Run locally
 
